@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+    web:
+        build:
+            context: ./
+            dockerfile: Dockerfile
+        ports:
+            - "8004:8000"
+        environment:
+            REMAP_SIGTERM: SIGQUIT
+            CELERY_BROKER_URL: redis://redis:6379/0
+            CELERY_RESULT_BACKEND: redis://redis:6379/0
+        command: uvicorn main:app --host 0.0.0.0 --reload
+        depends_on:
+            - redis
+    worker:
+        build:
+            context: ./
+            dockerfile: Dockerfile
+        environment:
+            REMAP_SIGTERM: SIGQUIT
+            CELERY_BROKER_URL: redis://redis:6379/0
+            CELERY_RESULT_BACKEND: redis://redis:6379/0
+        command: celery -A celery_app worker --loglevel=INFO
+        depends_on:
+            - web
+            - redis
+    redis:
+        image: "redis:7-alpine"
