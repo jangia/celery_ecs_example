@@ -25,13 +25,13 @@ def send_newsletter():
     session = SessionLocal()
     for user in session.query(User).all():
         LOGGER.info(f"Sending newsletter to {user.email}")
-        time.sleep(2)
+        time.sleep(1)
 
 
 @celery_app.task(name="send_newsletter_to_user")
 def send_newsletter_to_user(user_email):
     LOGGER.info(f"Sending newsletter to {user_email}")
-    time.sleep(2)
+    time.sleep(1)
 
 
 @celery_app.task(name="send_newsletter_fan_out")
@@ -56,7 +56,7 @@ def send_newsletter_batching(last_evaluated_key=None):
 
     for user in users:
         LOGGER.info(f"Sending newsletter to {user.email}")
-        time.sleep(2)
+        time.sleep(1)
 
     if len(users) < BATCH_SIZE:
         return
@@ -72,4 +72,4 @@ def send_newsletter_locking(self):
     session = SessionLocal()
     for user in session.query(User).all():
         LOGGER.info(f"Sending newsletter to {user.email}")
-        time.sleep(2)
+        time.sleep(1)
