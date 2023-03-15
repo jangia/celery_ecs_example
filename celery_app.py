@@ -51,7 +51,11 @@ def send_newsletter_batching(last_evaluated_key=None):
     last_evaluated_key = last_evaluated_key or -1
     session = SessionLocal()
     users = (
-        session.query(User).filter(User.id > last_evaluated_key).limit(BATCH_SIZE).all()
+        session.query(User)
+        .filter(User.id > last_evaluated_key)
+        .order_by(User.id)
+        .limit(BATCH_SIZE)
+        .all()
     )
 
     for user in users:
