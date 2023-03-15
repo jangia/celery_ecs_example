@@ -39,10 +39,10 @@ def no_parallel_processing_of_task(fun):  # type: ignore
                 )
                 return "Same job is being processed by some other worker"
             result = fun(self, *args, **kwargs)
-        except Exception as exc:
-            raise exc
-        finally:
             release(job_id=self.request.id)
+        except Exception as exc:
+            release(job_id=self.request.id)
+            raise exc
         return result
 
     return outer
