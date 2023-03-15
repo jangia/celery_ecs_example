@@ -8,20 +8,24 @@ services:
             - "8004:8000"
         environment:
             REMAP_SIGTERM: SIGQUIT
+            REDIS_URL: redis://redis:6379
             CELERY_BROKER_URL: redis://redis:6379/0
             CELERY_RESULT_BACKEND: redis://redis:6379/0
         command: uvicorn main:app --host 0.0.0.0 --reload
         depends_on:
             - redis
     worker:
+        deploy:
+            replicas: ${WORKER_REPLICAS:-1}
         build:
             context: ./
             dockerfile: Dockerfile
         environment:
             REMAP_SIGTERM: SIGQUIT
+            REDIS_URL: redis://redis:6379
             CELERY_BROKER_URL: redis://redis:6379/0
             CELERY_RESULT_BACKEND: redis://redis:6379/0
-        command: celery -A celery_app worker --loglevel=INFO
+        command: celery --app=celery_app worker --loglevel=INFO --concurrency=1
         depends_on:
             - web
             - redis

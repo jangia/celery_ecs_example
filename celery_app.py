@@ -5,6 +5,7 @@ import time
 import celery
 
 from db import SessionLocal, User
+from task_lock import no_parallel_processing_of_task
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ BATCH_SIZE = 2
 
 
 @celery_app.task(
-    name="send_newsletter_batching"
+    name="send_newsletter_batching",
 )
 def send_newsletter_batching(last_evaluated_key=None):
     last_evaluated_key = last_evaluated_key or -1
@@ -65,3 +66,15 @@ def send_newsletter_batching(last_evaluated_key=None):
         return
     new_last_evaluated_key = users[-1].id
     send_newsletter_batching.apply_async(kwargs={"last_evaluated_key": new_last_evaluated_key})
+
+
+@celery_app.task(
+    name="send_newsletter_no_parallel_processing",
+    bind=True
+)
+@no_parallel_processing_of_task
+def send_newsletter_no_parallel_processing(self):
+    session = SessionLocal()
+    for user in session.query(User).all():
+        LOGGER.info(f"Sending newsletter to {user.email}")
+        time.sleep(2)

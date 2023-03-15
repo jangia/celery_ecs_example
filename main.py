@@ -22,3 +22,9 @@ def send_newsletter_fanout():
 def send_newsletter_fanout():
     task = celery_app.send_newsletter_batching.apply_async()
     return JSONResponse({"task_id": task.id})
+
+
+@app.get("/send-newsletter/no-parallel-processing")
+def send_newsletter_fanout():
+    task = celery_app.send_newsletter_no_parallel_processing.apply_async()
+    return JSONResponse({"task_id": task.id})
