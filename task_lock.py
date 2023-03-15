@@ -44,4 +44,5 @@ def no_parallel_processing_of_task(fun):  # type: ignore
         finally:
             release(job_id=self.request.id)
         return result
+
     return outer
