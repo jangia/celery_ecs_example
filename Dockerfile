@@ -2,67 +2,57 @@
 # BUILDER #
 ###########
 
-# pull official base image
-FROM python:3.11-slim-bullseye as builder
+FROM python:3.12-slim-bookworm AS builder
 
-# install system dependencies
-RUN apt-get update \
-  && apt-get -y install g++ \
-  && apt-get clean
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# set work directory
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/opt/venv
+
 WORKDIR /usr/src/app
 
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# install python dependencies
-RUN pip install --upgrade pip
-COPY ./requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
 
 
 #########
 # FINAL #
 #########
 
-# pull official base image
-FROM python:3.11-slim-bullseye
+FROM python:3.12-slim-bookworm
 
-# upgrade system packages & install lsof
-RUN apt-get update && apt-get upgrade -y && apt-get -y install lsof && apt-get clean
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get -y install --no-install-recommends lsof \
+    && rm -rf /var/lib/apt/lists/*
 
-# create directory for the app user
-RUN mkdir -p /home/app
-
-# create the app user
 RUN addgroup --system app && adduser --system --group app
 
-# create the appropriate directories
-ENV HOME=/home/app
-ENV APP_HOME=/home/app/web
-RUN mkdir $APP_HOME
+ENV HOME=/home/app \
+    APP_HOME=/home/app/web \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=prod \
+    TESTING=0 \
+    PATH="/opt/venv/bin:$PATH" \
+    VIRTUAL_ENV=/opt/venv
+
+RUN mkdir -p $APP_HOME
 WORKDIR $APP_HOME
 
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV ENVIRONMENT prod
-ENV TESTING 0
-ENV PYTHONPATH $APP_HOME
-
-# install dependencies
-COPY --from=builder /usr/src/app/wheels /wheels
-COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install --no-cache /wheels/*
-
-# copy project
+COPY --from=builder /opt/venv /opt/venv
 COPY . $APP_HOME
 
-# chown all the files to the app user
-RUN chown -R app:app $HOME
+ENV PYTHONPATH=$APP_HOME
 
-# change to the app user
+RUN chown -R app:app $HOME /opt/venv
+
 USER app

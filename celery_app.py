@@ -9,8 +9,18 @@ from task_lock import no_parallel_processing_of_task
 
 LOGGER = logging.getLogger(__name__)
 
+
+class Task(celery.Task):
+    autoretry_for = (Exception,)
+    max_retries = 5
+    retry_backoff = True
+    retry_backoff_max = 600
+    retry_jitter = True
+
+
 celery_app = celery.Celery(
     __name__,
+    task_cls=Task,
 )
 celery_app.conf.broker_transport_options = {
     "visibility_timeout": datetime.timedelta(minutes=15).total_seconds()
