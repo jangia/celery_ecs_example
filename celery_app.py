@@ -1,5 +1,7 @@
 import datetime
 import logging
+import signal
+import sys
 import time
 
 import celery
@@ -8,6 +10,19 @@ from db import SessionLocal, User
 from task_lock import no_parallel_processing_of_task
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _unraisable_hook(unraisable: "sys.UnraisableHookArgs") -> None:
+    exc_info = unraisable.exc_value if unraisable.exc_value is not None else False
+    LOGGER.error(
+        "Unraisable exception, exiting via SIGQUIT: %s",
+        unraisable.err_msg or unraisable.exc_value,
+        exc_info=exc_info,
+    )
+    signal.raise_signal(signal.SIGQUIT)
+
+
+sys.unraisablehook = _unraisable_hook
 
 
 class Task(celery.Task):
